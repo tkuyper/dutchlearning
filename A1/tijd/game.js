@@ -4,12 +4,13 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
 }
 
-class TimeGame {
-	constructor() {
-  	this.hours = ['twaalf', 'een', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien', 'elf'];
-  	this.pickTime();
+class Time {
+	constructor(hour, minute) {
+    this.hour = hour;
+    this.minute = minute;
+    this.hours = ['twaalf', 'een', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien', 'elf'];
     this.positions = [
-    	() => {
+      () => {
         const modMin = this.minute % 30;
         if (modMin == 0) return null;
         if (modMin == 15) return 'kwart';
@@ -38,31 +39,67 @@ class TimeGame {
       }
     ]
   }
-  
-  timeString() {
-  	return `${String(this.hour).padStart(2, '0')}.${String(this.minute).padStart(2, '0')}`
-  }
-  
-  pickTime() {
-  	this.hour = getRandomInt(1, 24);
-    this.minute = getRandomInt(0, 12) * 5;
-    console.log(`Time picked ${this.timeString()}`);
-  }
-  
-  checkAnswer(givenAnswer) {
-    const answer = this.positions
+
+  spokenString() {
+    return this.positions
     	.map((fn) => fn())
       .filter((word) => word !== null)
       .join(' ');
-    console.log(`Given answer is  '${givenAnswer}'`);
-    console.log(`Actual answer is '${answer}'`);
-  	if (answer === givenAnswer) return true;
-    return false;
   }
 
   wordForHour(hour) {
     const modHour = hour % 12;
     return this.hours[modHour];
+  }
+
+  static fromString(timeString) {
+    timeString = timeString.trim();
+    let timeArray = timeString.split('.');
+    if (timeArray.length !== 2) {
+      throw new Error("Expected format uu.mm");
+    }
+    console.log(`fromString: "${timeArray[0]}" "${timeArray[1]}"`);
+    let hour = parseInt(timeArray[0], 10);
+    let minute = parseInt(timeArray[1], 10);
+    if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
+      return new Time(hour, minute);
+    }
+    throw new Error("Invalid time");
+  }
+  
+  toString() {
+  	return `${String(this.hour).padStart(2, '0')}.${String(this.minute).padStart(2, '0')}`
+  }
+
+  equals(otherTime) {
+    if (this.minute !== this.minute) return false;
+    if (this.hour % 12 !== otherTime.hour % 12) return false;
+    return true;
+  }
+}
+
+class TimeGame {
+	constructor() {
+  	this.pickTime();
+  }
+
+  pickedTimeDigits() {
+    return this.time.toString();
+  }
+
+  pickedTimeSpoken() {
+    return this.time.spokenString();
+  }
+  
+  pickTime() {
+    this.time = new Time(getRandomInt(0, 24), getRandomInt(0, 12) * 5);
+    console.log(`Time picked ${this.time.toString()}`);
+  }
+  
+  checkAnswer(answer) {
+    console.log(`Given answer is '${answer}'`);
+    console.log(`Actual answer is '${this.time.spokenString()}'`);
+  	return this.time.spokenString() === answer;
   }
 }
 
@@ -88,41 +125,79 @@ const checkButton = document.getElementById("check-answer");
 const antwoord = document.getElementById("antwoord");
 const displayedTime = document.getElementById("displayed-time");
 const streakCounter = document.getElementById("streak-counter");
+const speelsoort = document.getElementById("speelsoort");
+const errorNode = document.getElementById("error");
 const streak = new StreakCounter(streakCounter);
 
-displayedTime.innerText = game.timeString();
+function getDisplay(game) {
+  if (speelsoort.checked) {
+    return game.pickedTimeSpoken();
+  } else {
+    return game.pickedTimeDigits();
+  }
+}
+
+displayedTime.innerText = getDisplay(game);
+
+function displayGame() {
+  antwoord.value = '';
+  displayedTime.innerText = getDisplay(game);
+  displayedTime.classList.remove("success", "failure");
+  checkButton.disabled = false;
+}
+
+function displaySuccess() {
+  console.log("Correct!");
+  displayedTime.innerText = "Correct!";
+  displayedTime.classList.add("success");
+  checkButton.disabled = true;
+}
+
+function displayFailure() {
+  console.log("Wrong!");
+  displayedTime.innerText = "Wrong";
+  displayedTime.classList.add("failure");
+  checkButton.disabled = true;
+}
 
 checkButton.addEventListener("click", function() {
-	if(game.checkAnswer(antwoord.value)) {
-    console.log("Correct!");
-    displayedTime.innerText = "Correct!";
-    displayedTime.classList.add("success");
-    checkButton.disabled = true;
+  errorNode.innerText = "";
+  if (antwoord.value === "") {
+    return;
+  }
+  let answer = antwoord.value;
+  if (speelsoort.checked) {
+    try {
+      answer = Time.fromString(antwoord.value).spokenString();
+    } catch (e) {
+      errorNode.innerText = e.message;
+      return;
+    }
+  }
+	if(game.checkAnswer(answer)) {
+    displaySuccess();
     streak.incrementStreak();
   	game.pickTime();
     setTimeout(() => {
-    	antwoord.value = '';
-    	displayedTime.innerText = game.timeString();
-    	displayedTime.classList.remove("success");
-    	checkButton.disabled = false;
+    	displayGame();
     }, 1000);
   } else {
-    console.log("Wrong!");
-    displayedTime.innerText = "Wrong";
-    displayedTime.classList.add("failure");
-    checkButton.disabled = true;
+    displayFailure();
     streak.resetStreak();
     setTimeout(() => {
-    	displayedTime.innerText = game.timeString();
-    	displayedTime.classList.remove("failure");
-    	checkButton.disabled = false;
+    	displayGame();
     }, 1000);
   }
 }, false);
 
 antwoord.addEventListener("keyup", function(event) {
-    event.preventDefault();
-    if (event.keyCode === 13) {
-        checkButton.click();
-    }
+  event.preventDefault();
+  if (event.keyCode === 13) {
+      checkButton.click();
+  }
+});
+
+speelsoort.addEventListener("click", function() {
+  game.pickTime();
+  displayGame();
 });
