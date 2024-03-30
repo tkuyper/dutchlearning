@@ -33,11 +33,20 @@
   text-align: center;
 }
 p.vragen {
+  font-size: 1.25rem;
+  margin-top: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+p#displayed-time.digits {
+  font-size: 3rem;
+}
+p#displayed-time.woords {
   font-size: 2rem;
 }
 p#displayed-time {
-  font-size: 3rem;
   text-align: center;
+  margin-top: 0.3rem;
+  margin-bottom: 0.3rem;
 }
 input#antwoord {
   border-style: solid;

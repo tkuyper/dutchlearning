@@ -138,6 +138,7 @@ function getDisplay(game) {
 }
 
 displayedTime.innerText = getDisplay(game);
+setQuestionSize();
 
 function displayGame() {
   antwoord.value = '';
@@ -160,12 +161,22 @@ function displayFailure() {
   checkButton.disabled = true;
 }
 
+function setQuestionSize() {
+  if (speelsoort.checked) {
+    displayedTime.classList.remove("digits");
+    displayedTime.classList.add("woords");
+  } else {
+    displayedTime.classList.remove("woords");
+    displayedTime.classList.add("digits");
+  }
+}
+
 checkButton.addEventListener("click", function() {
   errorNode.innerText = "";
   if (antwoord.value === "") {
     return;
   }
-  let answer = antwoord.value;
+  let answer = antwoord.value.toLowerCase();
   if (speelsoort.checked) {
     try {
       answer = Time.fromString(antwoord.value).spokenString();
@@ -199,5 +210,6 @@ antwoord.addEventListener("keyup", function(event) {
 
 speelsoort.addEventListener("click", function() {
   game.pickTime();
+  setQuestionSize();
   displayGame();
 });
