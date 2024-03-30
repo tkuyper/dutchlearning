@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="nl-NL">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoe laat is het?</title>
+  <style>
+.dark {
+  background-color: #212121;
+  color: #F0F0F0;
+}
+.light input {
+  border-color: #212121;
+}
+.dark input, .dark button {
+  background-color: #212121;
+  color: #F0F0F0;
+  border-color: #D0D0D0;
+}
+.box {
+  padding: 0.5rem;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 4px;
+}
+.light .box {
+  border-color: #212121;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
+}
+.dark .box {
+  border-color: #D0D0D0;
+  box-shadow: 2px 2px 5px rgba(255, 255, 255, 0.2);
+}
+.app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.box p {
+  text-align: center;
+}
+p.vragen {
+  font-size: 2rem;
+}
+p#displayed-time {
+  font-size: 3rem;
+  text-align: center;
+}
+input#antwoord {
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 5px;
+  padding: 5px;
+  margin-left: 0.1rem;
+  min-width: 50px;
+}
+#check-answer {
+  font-size: 1.2rem;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 5px;
+  padding: 5px;
+  min-width: 50px;
+}
+#check-answer:hover {
+  border-width: 3px;
+  padding: 4px;
+}
+#check-answer:active {
+  border-width: 3px;
+  padding: 4px;
+  margin-left: 0.05rem;
+  margin-top: 0.05rem;
+  margin-right: -0.05rem;
+  margin-bottom: -0.05rem;
+}
+.dark .success {
+  color: #30FF30;
+}
+.dark .failure {
+  color: #FF3030;
+}
+</style>
+</head>
+<body class="dark">
+  <div class="app">
+    <div class="box">
+      <p class="vragen">Hoe laat is het?</p>
+      <p id="displayed-time">24.60</p>
+      <p>
+        Het is <input id="antwoord">
+      </p>
+      <p>
+        <button type="button" id="check-answer">Check Answer</button>
+      </p>
+      <p class="streak">Streak: <span id="streak-counter">0</span></p>
+    </div>
+  </div>
+  <script>
+function getRandomInt(min, max) {
+  const minCeiled = Math.ceil(min);
+  const maxFloored = Math.floor(max);
+  return Math.floor(Math.random() * (maxFloored - minCeiled) + minCeiled); // The maximum is exclusive and the minimum is inclusive
+}
+
+class TimeGame {
+	constructor() {
+  	this.hours = ['twaalf', 'een', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven', 'acht', 'negen', 'tien', 'elf'];
+  	this.pickTime();
+    this.positions = [
+    	() => {
+        const modMin = this.minute % 30;
+        if (modMin == 0) return null;
+        if (modMin == 15) return 'kwart';
+        if (modMin % 10 == 0) return 'tien';
+        return 'vijf';
+      },
+      () => {
+        if (this.minute % 30 == 0) return null;
+        let over = 1;
+        if (Math.abs(30 - this.minute) < 15) over = -1;
+        if (this.minute > 30) over = -over;
+        if (over == 1) return 'over';
+        return 'voor';
+      },
+      () => {
+        if (Math.abs(30 - this.minute) < 15) return 'half';
+        return null;
+      },
+      () => {
+        if (this.minute <= 15) return this.wordForHour(this.hour);
+        return this.wordForHour(this.hour + 1);
+      },
+      () => {
+        if (this.minute == 0) return 'uur';
+        return null;
+      }
+    ]
+  }
+  
+  timeString() {
+  	return `${String(this.hour).padStart(2, '0')}.${String(this.minute).padStart(2, '0')}`
+  }
+  
+  pickTime() {
+  	this.hour = getRandomInt(1, 24);
+    this.minute = getRandomInt(0, 12) * 5;
+    console.log(`Time picked ${this.timeString()}`);
+  }
+  
+  checkAnswer(givenAnswer) {
+    const answer = this.positions
+    	.map((fn) => fn())
+      .filter((word) => word !== null)
+      .join(' ');
+    console.log(`Given answer is  '${givenAnswer}'`);
+    console.log(`Actual answer is '${answer}'`);
+  	if (answer === givenAnswer) return true;
+    return false;
+  }
+
+  wordForHour(hour) {
+    const modHour = hour % 12;
+    return this.hours[modHour];
+  }
+}
+
+class StreakCounter {
+	constructor(streakNode) {
+  	this.node = streakNode;
+    this.resetStreak();
+  }
+  
+  incrementStreak() {
+  	this.streak++;
+    this.node.innerText = this.streak;
+  }
+  
+  resetStreak() {
+  	this.streak = 0;
+    this.node.innerText = this.streak;
+  }
+}
+
+const game = new TimeGame();
+const checkButton = document.getElementById("check-answer");
+const antwoord = document.getElementById("antwoord");
+const displayedTime = document.getElementById("displayed-time");
+const streakCounter = document.getElementById("streak-counter");
+const streak = new StreakCounter(streakCounter);
+
+displayedTime.innerText = game.timeString();
+
+checkButton.addEventListener("click", function() {
+	if(game.checkAnswer(antwoord.value)) {
+    console.log("Correct!");
+    displayedTime.innerText = "Correct!";
+    displayedTime.classList.add("success");
+    checkButton.disabled = true;
+    streak.incrementStreak();
+  	game.pickTime();
+    setTimeout(() => {
+    	antwoord.value = '';
+    	displayedTime.innerText = game.timeString();
+    	displayedTime.classList.remove("success");
+    	checkButton.disabled = false;
+    }, 1000);
+  } else {
+    console.log("Wrong!");
+    displayedTime.innerText = "Wrong";
+    displayedTime.classList.add("failure");
+    checkButton.disabled = true;
+    streak.resetStreak();
+    setTimeout(() => {
+    	displayedTime.innerText = game.timeString();
+    	displayedTime.classList.remove("failure");
+    	checkButton.disabled = false;
+    }, 1000);
+  }
+}, false);
+
+antwoord.addEventListener("keyup", function(event) {
+    event.preventDefault();
+    if (event.keyCode === 13) {
+        checkButton.click();
+    }
+});
+</script>
+</body>
+</html>
